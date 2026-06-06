@@ -2,7 +2,7 @@
 
 voice-lab es un sistema privado para preparar audios, organizar datasets y ejecutar flujos futuros de voice-to-voice / voice conversion en batch con RVC/Applio, FFmpeg y Python.
 
-La Fase 1B convierte los placeholders de audio en herramientas reales para preparar audios con FFmpeg. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
+La Fase 1C agrega una cola batch funcional basada en archivos JSON y carpetas, usando el pipeline placeholder actual de `infer_one.sh`. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
 
 ## Uso autorizado
 
@@ -43,6 +43,15 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
 - Registrar logs basicos por job.
 - Validar el flujo con FFmpeg sin integrar RVC todavia.
 
+### Fase 1C: cola batch local
+
+- Leer audios desde `input/pending/`.
+- Crear jobs JSON en `queue/jobs/`.
+- Evitar duplicados por ruta absoluta de input.
+- Procesar un job por ejecucion con baja prioridad usando `nice` e `ionice` si esta disponible.
+- Mover jobs terminados a `queue/done/` o `queue/failed/`.
+- Seguir usando `infer_one.sh` como placeholder: no hay RVC real todavia.
+
 ### MVP 1: inferencia individual
 
 - Convertir una entrada de audio a WAV limpio.
@@ -76,6 +85,7 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
     config.py
     audio_utils.py
     jobs.py
+    queue_cli.py
     rvc_runner.py
     main.py
   scripts/
@@ -132,6 +142,53 @@ Validar el flujo individual placeholder:
 
 `infer_one.sh` actualmente valida el pipeline de audio: normaliza a WAV limpio, copia ese WAV a `output/wav/` como placeholder y exporta MP3. Todavia no hace conversion de voz ni llama RVC/Applio.
 
+## Fase 1C: cola batch placeholder
+
+Colocar un audio autorizado en la cola pendiente:
+
+```bash
+cp archivo.mp3 input/pending/
+```
+
+Crear jobs JSON para los audios pendientes:
+
+```bash
+python3 -m app.queue_cli enqueue-pending
+```
+
+Listar jobs en cola, terminados y fallidos:
+
+```bash
+python3 -m app.queue_cli list
+```
+
+Ejecutar un ciclo batch de baja prioridad:
+
+```bash
+./scripts/run_batch_lowprio.sh
+```
+
+El batch llama internamente:
+
+```bash
+python3 -m app.queue_cli enqueue-pending
+python3 -m app.queue_cli process-all --limit 1
+```
+
+Los JSON se guardan en `queue/jobs/`, `queue/done/` y `queue/failed/`. Los audios permanecen en `input/pending/` y los jobs referencian su ruta absoluta. La salida se infiere por nombre base:
+
+- `output/wav/<nombre>.clean.wav`
+- `output/mp3/<nombre>.clean.mp3`
+- `logs/jobs/<nombre>.log`
+
+Por ahora este flujo sigue siendo placeholder sin RVC real: normaliza audio con FFmpeg, copia el WAV limpio como salida WAV y exporta MP3.
+
+Cron futuro, cuando se decida automatizar fuera del repo:
+
+```cron
+0 2 * * * /usr/bin/flock -n /tmp/voice-batch.lock /opt/voice-lab/scripts/run_batch_lowprio.sh
+```
+
 ## Flujo de inferencia individual
 
 1. Colocar un archivo de audio autorizado en `input/manual/`.
@@ -143,15 +200,15 @@ Validar el flujo individual placeholder:
 
 En Fase 1B este flujo procesa audio real con FFmpeg, pero no ejecuta inferencia RVC real.
 
-## Flujo futuro de batch nocturno
+## Flujo de batch nocturno
 
 1. Colocar audios autorizados en `input/pending/`.
 2. Crear jobs simples en `queue/jobs/`.
-3. Ejecutar un worker con baja prioridad usando herramientas como `nice`, `ionice`, `flock` o `systemd-run`.
-4. Procesar como maximo `MAX_BATCH_JOBS` en paralelo.
+3. Ejecutar `scripts/run_batch_lowprio.sh`.
+4. Procesar como maximo un job por corrida en esta fase.
 5. Mover trabajos finalizados a `queue/done/` o `queue/failed/`.
 
-En Fase 1 no se procesa audio real.
+En Fase 1C se procesa audio real con FFmpeg, pero la conversion de voz sigue siendo placeholder sin RVC real.
 
 ## Flujo futuro de entrenamiento GPU
 

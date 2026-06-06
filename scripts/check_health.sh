@@ -47,9 +47,13 @@ check_cmd python3
 check_cmd git
 check_cmd ffmpeg
 check_cmd ffprobe
+check_cmd flock
+check_cmd nice
+check_cmd ionice optional
 
 echo
 check_file "${ROOT}/app/cli.py"
+check_file "${ROOT}/app/queue_cli.py"
 
 echo
 check_dir "${ROOT}/app"
