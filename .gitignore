@@ -42,3 +42,8 @@ models/*/logs/*
 .DS_Store
 .vscode/
 .idea/
+
+# Dataset generated metadata/reports
+datasets/*/metadata/report.json
+datasets/*/metadata/report.md
+datasets/*/metadata/*.csv
