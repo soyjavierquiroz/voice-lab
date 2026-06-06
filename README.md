@@ -2,7 +2,7 @@
 
 voice-lab es un sistema privado para preparar audios, organizar datasets y ejecutar flujos futuros de voice-to-voice / voice conversion en batch con RVC/Applio, FFmpeg y Python.
 
-La Fase 1D agrega una capa segura de ejecucion limitada para batch nocturno con `systemd-run` y prepara cron de forma controlada, sin activarlo automaticamente. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
+La Fase 2A agrega preparacion real de datasets para entrenamiento futuro de voces RVC/Applio. Convierte audios autorizados desde `datasets/<dataset>/raw/` hacia WAV limpios en `datasets/<dataset>/clean/`, genera metadata y reportes, y mantiene el flujo sin entrenar modelos ni integrar RVC todavia. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
 
 ## Uso autorizado
 
@@ -61,6 +61,16 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
 - Preparar `scripts/remove_cron.sh` para remover solo la linea de voice-lab, tambien con `--dry-run` por defecto.
 - Mantener el flujo sin RVC real todavia: la conversion sigue siendo placeholder con FFmpeg.
 
+### Fase 2A: preparacion real de datasets
+
+- Escanear audios en `datasets/<dataset>/raw/` con `ffprobe` si esta disponible.
+- Convertir audios raw a WAV mono `pcm_s16le`, `40000 Hz` por defecto, en `datasets/<dataset>/clean/`.
+- Usar filtros prudentes de remuestreo sin cambiar tempo, pitch, emocionalidad ni ritmo de voz.
+- Generar `metadata/report.json`, `metadata/report.md` y `logs/prepare_dataset.log`.
+- Saltar salidas existentes salvo que se use `--overwrite`.
+- Mantener audios raw intactos.
+- Todavia no entrena modelos ni integra RVC/Applio.
+
 ### MVP 1: inferencia individual
 
 - Convertir una entrada de audio a WAV limpio.
@@ -93,6 +103,7 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
   app/
     config.py
     audio_utils.py
+    dataset_cli.py
     jobs.py
     queue_cli.py
     rvc_runner.py
@@ -118,6 +129,16 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
   models/
   logs/
   tmp/
+```
+
+Estructura de dataset por voz:
+
+```text
+datasets/mi_voz/
+  raw/
+  clean/
+  metadata/
+  logs/
 ```
 
 ## Fase 1B: comandos de prueba
@@ -241,6 +262,50 @@ Revisar la remocion propuesta sin modificar nada:
 ```bash
 ./scripts/remove_cron.sh --dry-run
 ```
+
+## Fase 2A: preparar dataset de voz
+
+Colocar audios autorizados en `raw/`:
+
+```bash
+cp mis_audios/*.wav datasets/mi_voz/raw/
+```
+
+Escanear sin modificar archivos:
+
+```bash
+python -m app.dataset_cli scan --dataset mi_voz
+```
+
+Preparar WAV limpios y reportes:
+
+```bash
+./scripts/prepare_dataset.sh mi_voz
+```
+
+Sobrescribir WAV limpios existentes solo cuando sea intencional:
+
+```bash
+./scripts/prepare_dataset.sh mi_voz --overwrite
+```
+
+Ver el ultimo reporte humano:
+
+```bash
+python -m app.dataset_cli report --dataset mi_voz
+```
+
+Recomendaciones para datasets RVC/Applio futuros:
+
+- Minimo viable: 10 minutos limpios.
+- Recomendado: 30 a 60 minutos.
+- Una sola voz.
+- Sin musica.
+- Sin eco.
+- Sin ruido.
+- Sin voces cruzadas.
+
+Esta fase solo prepara el dataset. No entrena modelos, no descarga RVC/Applio y no hace conversion de voz.
 
 ## Flujo de inferencia individual
 

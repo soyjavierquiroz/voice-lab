@@ -65,7 +65,9 @@ check_cmd crontab optional
 
 echo
 check_file "${ROOT}/app/cli.py"
+check_file "${ROOT}/app/dataset_cli.py"
 check_file "${ROOT}/app/queue_cli.py"
+check_executable "${ROOT}/scripts/prepare_dataset.sh"
 check_executable "${ROOT}/scripts/run_batch_lowprio.sh"
 check_executable "${ROOT}/scripts/run_batch_limited.sh"
 check_executable "${ROOT}/scripts/install_cron.sh"

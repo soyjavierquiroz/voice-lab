@@ -51,6 +51,32 @@ def build_normalize_to_wav_command(input_path: Path, output_path: Path, sample_r
     ]
 
 
+def build_dataset_clean_wav_command(
+    input_path: Path,
+    output_path: Path,
+    sample_rate: int = 40000,
+    overwrite: bool = False,
+) -> list[str]:
+    return [
+        _require_ffmpeg(),
+        "-y" if overwrite else "-n",
+        "-i",
+        str(input_path),
+        "-af",
+        f"aresample={sample_rate}",
+        "-ac",
+        "1",
+        "-ar",
+        str(sample_rate),
+        "-c:a",
+        "pcm_s16le",
+        "-vn",
+        "-f",
+        "wav",
+        str(output_path),
+    ]
+
+
 def build_export_mp3_command(input_wav: Path, output_mp3: Path, bitrate: str = "192k") -> list[str]:
     return [
         _require_ffmpeg(),
@@ -78,6 +104,19 @@ def normalize_to_wav(input_path: str | Path, output_path: str | Path, sample_rat
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     _run_ffmpeg(build_normalize_to_wav_command(source, target, sample_rate))
+    return target
+
+
+def clean_dataset_audio_to_wav(
+    input_path: str | Path,
+    output_path: str | Path,
+    sample_rate: int = 40000,
+    overwrite: bool = False,
+) -> Path:
+    source = _validate_input_file(input_path)
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _run_ffmpeg(build_dataset_clean_wav_command(source, target, sample_rate, overwrite=overwrite))
     return target
 
 
