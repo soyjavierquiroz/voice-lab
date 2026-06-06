@@ -42,5 +42,5 @@ run_lowprio "${PYTHON_BIN}" -m app.queue_cli process-all --limit 1
 
 echo "Finished: $(date -Is)"
 
-# Cron/systemd futuro:
-# 0 2 * * * /usr/bin/flock -n /tmp/voice-batch.lock /opt/voice-lab/scripts/run_batch_lowprio.sh
+# Cron futuro:
+# 0 2 * * * /opt/voice-lab/scripts/run_batch_limited.sh >> /opt/voice-lab/logs/cron.log 2>&1

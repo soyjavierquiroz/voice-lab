@@ -39,6 +39,16 @@ check_file() {
   fi
 }
 
+check_executable() {
+  local path="$1"
+  if [ -x "${path}" ]; then
+    echo "OK   executable: ${path}"
+  else
+    echo "FAIL executable: ${path}"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
 echo "[voice-lab] Health check"
 echo "Root: ${ROOT}"
 echo
@@ -50,10 +60,16 @@ check_cmd ffprobe
 check_cmd flock
 check_cmd nice
 check_cmd ionice optional
+check_cmd systemd-run
+check_cmd crontab optional
 
 echo
 check_file "${ROOT}/app/cli.py"
 check_file "${ROOT}/app/queue_cli.py"
+check_executable "${ROOT}/scripts/run_batch_lowprio.sh"
+check_executable "${ROOT}/scripts/run_batch_limited.sh"
+check_executable "${ROOT}/scripts/install_cron.sh"
+check_executable "${ROOT}/scripts/remove_cron.sh"
 
 echo
 check_dir "${ROOT}/app"

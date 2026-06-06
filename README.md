@@ -2,7 +2,7 @@
 
 voice-lab es un sistema privado para preparar audios, organizar datasets y ejecutar flujos futuros de voice-to-voice / voice conversion en batch con RVC/Applio, FFmpeg y Python.
 
-La Fase 1C agrega una cola batch funcional basada en archivos JSON y carpetas, usando el pipeline placeholder actual de `infer_one.sh`. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
+La Fase 1D agrega una capa segura de ejecucion limitada para batch nocturno con `systemd-run` y prepara cron de forma controlada, sin activarlo automaticamente. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
 
 ## Uso autorizado
 
@@ -52,6 +52,15 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
 - Mover jobs terminados a `queue/done/` o `queue/failed/`.
 - Seguir usando `infer_one.sh` como placeholder: no hay RVC real todavia.
 
+### Fase 1D: ejecucion limitada y cron seguro
+
+- Mantener `scripts/run_batch_lowprio.sh` como runner real con `flock`, `nice`, `ionice` si esta disponible y `process-all --limit 1`.
+- Agregar `scripts/run_batch_limited.sh` como wrapper con una unidad transitoria `systemd` tipo `service`, `systemd-run --wait --collect`, `CPUQuota` y `MemoryMax`.
+- Usar `CPU_QUOTA=60%` y `MEMORY_MAX=5G` por defecto, configurables desde `.env`.
+- Preparar `scripts/install_cron.sh` para instalar cron solo con `--yes`; por defecto hace `--dry-run`.
+- Preparar `scripts/remove_cron.sh` para remover solo la linea de voice-lab, tambien con `--dry-run` por defecto.
+- Mantener el flujo sin RVC real todavia: la conversion sigue siendo placeholder con FFmpeg.
+
 ### MVP 1: inferencia individual
 
 - Convertir una entrada de audio a WAV limpio.
@@ -95,6 +104,9 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
     train_gpu.sh
     infer_one.sh
     run_batch_lowprio.sh
+    run_batch_limited.sh
+    install_cron.sh
+    remove_cron.sh
     sync_to_gpu.sh
     sync_from_gpu.sh
     check_health.sh
@@ -183,10 +195,51 @@ Los JSON se guardan en `queue/jobs/`, `queue/done/` y `queue/failed/`. Los audio
 
 Por ahora este flujo sigue siendo placeholder sin RVC real: normaliza audio con FFmpeg, copia el WAV limpio como salida WAV y exporta MP3.
 
-Cron futuro, cuando se decida automatizar fuera del repo:
+## Fase 1D: batch limitado y cron controlado
+
+`run_batch_lowprio.sh` es el runner real. Se encarga de tomar `input/pending/`, crear jobs, adquirir `flock`, bajar prioridad con `nice`/`ionice` y procesar como maximo un job por corrida con `process-all --limit 1`.
+
+`run_batch_limited.sh` es el wrapper seguro para ejecucion nocturna. Llama al runner real dentro de una unidad transitoria `systemd` tipo `service` con limites conservadores:
+
+- `CPUQuota=${CPU_QUOTA:-60%}`
+- `MemoryMax=${MEMORY_MAX:-5G}`
+- `Nice=19`
+- `IOSchedulingClass=idle`
+
+`CPUQuota=60%` en systemd es deliberadamente conservador: protege el servidor y otros servicios, pero puede hacer que el procesamiento tarde mas.
+
+Nota de compatibilidad: en Ubuntu/systemd actual, `systemd-run` no permite combinar `--scope` con `--wait`, por eso el wrapper usa una unidad transitoria tipo `service`.
+
+Ejecutar una corrida limitada manual:
+
+```bash
+./scripts/run_batch_limited.sh
+```
+
+Revisar la instalacion propuesta de cron sin modificar nada:
+
+```bash
+./scripts/install_cron.sh --dry-run
+```
+
+Instalar cron solo cuando se confirme explicitamente:
+
+```bash
+./scripts/install_cron.sh --yes
+```
+
+La linea propuesta por defecto es:
 
 ```cron
-0 2 * * * /usr/bin/flock -n /tmp/voice-batch.lock /opt/voice-lab/scripts/run_batch_lowprio.sh
+0 2 * * * /opt/voice-lab/scripts/run_batch_limited.sh >> /opt/voice-lab/logs/cron.log 2>&1
+```
+
+El cron futuro llama a `run_batch_limited.sh`, no directamente a `run_batch_lowprio.sh`. No se usa `flock` externo en cron porque `run_batch_lowprio.sh` ya lo aplica internamente.
+
+Revisar la remocion propuesta sin modificar nada:
+
+```bash
+./scripts/remove_cron.sh --dry-run
 ```
 
 ## Flujo de inferencia individual
@@ -204,11 +257,11 @@ En Fase 1B este flujo procesa audio real con FFmpeg, pero no ejecuta inferencia 
 
 1. Colocar audios autorizados en `input/pending/`.
 2. Crear jobs simples en `queue/jobs/`.
-3. Ejecutar `scripts/run_batch_lowprio.sh`.
+3. Ejecutar `scripts/run_batch_limited.sh` para una corrida controlada con limites de systemd.
 4. Procesar como maximo un job por corrida en esta fase.
 5. Mover trabajos finalizados a `queue/done/` o `queue/failed/`.
 
-En Fase 1C se procesa audio real con FFmpeg, pero la conversion de voz sigue siendo placeholder sin RVC real.
+El wrapper limitado llama internamente a `scripts/run_batch_lowprio.sh`, que mantiene el `flock` y la baja prioridad. En Fase 1D se procesa audio real con FFmpeg, pero la conversion de voz sigue siendo placeholder sin RVC real.
 
 ## Flujo futuro de entrenamiento GPU
 
