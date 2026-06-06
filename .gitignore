@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# Logs
+logs/*.log
+logs/jobs/*.log
+*.log
+
+# Runtime / generated files
+tmp/*
+processing/*
+input/pending/*
+input/manual/*
+queue/jobs/*
+queue/done/*
+queue/failed/*
+output/wav/*
+output/mp3/*
+
+# Large AI/audio artifacts
+datasets/*/raw/*
+datasets/*/clean/*
+models/*/*.pth
+models/*/*.index
+models/*/logs/*
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+
+# Keep folder placeholders
+!.gitkeep
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

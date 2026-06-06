@@ -1,0 +1,17 @@
+# GPU environment dependencies for future training/inference phases.
+# Keep this conservative in Fase 1: do not install yet.
+
+# RVC/Applio dependencies will be decided after choosing the exact engine.
+numpy
+soundfile
+librosa
+scipy
+
+# Optional API/runtime tools.
+fastapi
+uvicorn
+python-dotenv
+
+# Torch CUDA must match the CUDA version available on the GPU Droplet.
+# Install later using the official PyTorch command for that CUDA runtime.
+# Do not pin versions until the GPU image/CUDA version is known.
