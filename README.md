@@ -2,7 +2,7 @@
 
 voice-lab es un sistema privado para preparar audios, organizar datasets y ejecutar flujos futuros de voice-to-voice / voice conversion en batch con RVC/Applio, FFmpeg y Python.
 
-Esta fase crea solamente la estructura inicial del repositorio. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
+La Fase 1B convierte los placeholders de audio en herramientas reales para preparar audios con FFmpeg. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
 
 ## Uso autorizado
 
@@ -33,6 +33,15 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
 - Definir configuracion base.
 - Crear scripts placeholder seguros.
 - Preparar helpers Python minimos.
+
+### Fase 1B: pipeline real de preparacion de audio
+
+- Tomar entradas MP3, M4A o WAV.
+- Convertirlas a WAV limpio mono, `40000 Hz` por defecto y PCM signed 16-bit little endian.
+- Exportar una version MP3 con `libmp3lame`.
+- Inspeccionar audio con `ffprobe` si esta disponible.
+- Registrar logs basicos por job.
+- Validar el flujo con FFmpeg sin integrar RVC todavia.
 
 ### MVP 1: inferencia individual
 
@@ -89,16 +98,50 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
   tmp/
 ```
 
-## Flujo futuro de inferencia individual
+## Fase 1B: comandos de prueba
+
+Revisar herramientas y carpetas:
+
+```bash
+./scripts/check_health.sh
+```
+
+Inspeccionar un audio:
+
+```bash
+python3 -m app.cli probe --input input/manual/test.mp3
+```
+
+Convertir una entrada a WAV limpio:
+
+```bash
+python3 -m app.cli normalize --input input/manual/test.mp3 --output processing/test.clean.wav
+```
+
+Exportar MP3 desde el WAV limpio:
+
+```bash
+python3 -m app.cli export-mp3 --input-wav processing/test.clean.wav --output-mp3 output/mp3/test.clean.mp3
+```
+
+Validar el flujo individual placeholder:
+
+```bash
+./scripts/infer_one.sh input/manual/test.mp3 mi_voz
+```
+
+`infer_one.sh` actualmente valida el pipeline de audio: normaliza a WAV limpio, copia ese WAV a `output/wav/` como placeholder y exporta MP3. Todavia no hace conversion de voz ni llama RVC/Applio.
+
+## Flujo de inferencia individual
 
 1. Colocar un archivo de audio autorizado en `input/manual/`.
 2. Ejecutar `scripts/infer_one.sh input/manual/audio.mp3 mi_voz`.
 3. Normalizar el audio a WAV limpio en `processing/`.
-4. Invocar el motor RVC/Applio configurado.
-5. Guardar resultados en `output/wav/` y `output/mp3/`.
+4. Copiar el WAV limpio a `output/wav/` como placeholder hasta integrar RVC/Applio.
+5. Guardar el MP3 en `output/mp3/`.
 6. Registrar eventos en `logs/jobs/`.
 
-En Fase 1 este flujo solo valida argumentos y explica el estado pendiente.
+En Fase 1B este flujo procesa audio real con FFmpeg, pero no ejecuta inferencia RVC real.
 
 ## Flujo futuro de batch nocturno
 

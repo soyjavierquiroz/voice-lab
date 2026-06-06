@@ -1,17 +1,5 @@
-# CPU environment dependencies for future MVP phases.
-# Keep this conservative in Fase 1: do not install yet.
-
-# Web/API placeholder for optional app/main.py.
-fastapi
-uvicorn
-
-# Audio helpers for future processing.
-pydub
-soundfile
-numpy
-
-# Job/config utilities for future phases.
-python-dotenv
+# Fase 1B uses only the Python standard library plus system FFmpeg/ffprobe.
+# No mandatory Python dependencies yet.
 
 # Torch CPU should be installed later with the official CPU-specific command
 # for the target Python version and platform. Do not pin aggressively yet.

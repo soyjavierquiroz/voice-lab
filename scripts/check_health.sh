@@ -2,13 +2,20 @@
 set -euo pipefail
 
 ROOT="${VOICE_LAB_ROOT:-/opt/voice-lab}"
+FAILURES=0
+WARNINGS=0
 
 check_cmd() {
   local name="$1"
+  local required="${2:-required}"
   if command -v "${name}" >/dev/null 2>&1; then
     echo "OK   ${name}: $(command -v "${name}")"
+  elif [ "${required}" = "required" ]; then
+    echo "FAIL ${name}: not found"
+    FAILURES=$((FAILURES + 1))
   else
     echo "WARN ${name}: not found"
+    WARNINGS=$((WARNINGS + 1))
   fi
 }
 
@@ -17,7 +24,18 @@ check_dir() {
   if [ -d "${path}" ]; then
     echo "OK   dir: ${path}"
   else
-    echo "MISS dir: ${path}"
+    echo "FAIL dir: ${path}"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
+check_file() {
+  local path="$1"
+  if [ -f "${path}" ]; then
+    echo "OK   file: ${path}"
+  else
+    echo "FAIL file: ${path}"
+    FAILURES=$((FAILURES + 1))
   fi
 }
 
@@ -28,6 +46,10 @@ echo
 check_cmd python3
 check_cmd git
 check_cmd ffmpeg
+check_cmd ffprobe
+
+echo
+check_file "${ROOT}/app/cli.py"
 
 echo
 check_dir "${ROOT}/app"
@@ -49,4 +71,11 @@ check_dir "${ROOT}/logs/jobs"
 check_dir "${ROOT}/tmp"
 
 echo
-echo "Health check complete. No packages were installed and no services were modified."
+if [ "${FAILURES}" -gt 0 ]; then
+  echo "FAIL Health check complete: ${FAILURES} failure(s), ${WARNINGS} warning(s)."
+  echo "No packages were installed and no services were modified."
+  exit 1
+fi
+
+echo "OK   Health check complete: ${WARNINGS} warning(s)."
+echo "No packages were installed and no services were modified."
