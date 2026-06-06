@@ -1,12 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${VOICE_LAB_ROOT:-/opt/voice-lab}"
+cd /opt/voice-lab
 
-echo "[voice-lab] GPU setup placeholder"
+ROOT="/opt/voice-lab"
+
+echo "[voice-lab] GPU setup checklist"
 echo "Root: ${ROOT}"
 echo
-echo "Fase 1 no instala CUDA, torch, Applio ni RVC."
-echo "En una fase futura este script se adaptara al GPU Droplet temporal y a su version CUDA."
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+  echo "OK nvidia-smi found:"
+  nvidia-smi
+else
+  echo "WARN nvidia-smi not found."
+  echo "This script is intended for a future GPU Droplet. No GPU setup was performed."
+fi
+
 echo
-echo "No se realizo ningun cambio."
+echo "Future checklist, not executed yet:"
+echo "1. Verify nvidia-smi and CUDA driver/runtime compatibility."
+echo "2. Verify python version."
+echo "3. Create .venv-gpu or another isolated GPU environment."
+echo "4. Install PyTorch CUDA matching the available CUDA version."
+echo "5. Install Applio/RVC dependencies."
+echo
+echo "No apt, pip, external downloads, Docker or Swarm changes were performed."

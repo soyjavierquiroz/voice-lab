@@ -1,0 +1,8 @@
+{
+  "model_name": "mi_voz",
+  "dataset_name": "mi_voz",
+  "sample_rate": 40000,
+  "pitch_extractor": "placeholder",
+  "index_rate": 0.0,
+  "notes": "Placeholder informativo; no es una config real de RVC/Applio."
+}

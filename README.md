@@ -2,7 +2,9 @@
 
 voice-lab es un sistema privado para preparar audios, organizar datasets y ejecutar flujos futuros de voice-to-voice / voice conversion en batch con RVC/Applio, FFmpeg y Python.
 
-La Fase 2A agrega preparacion real de datasets para entrenamiento futuro de voces RVC/Applio. Convierte audios autorizados desde `datasets/<dataset>/raw/` hacia WAV limpios en `datasets/<dataset>/clean/`, genera metadata y reportes, y mantiene el flujo sin entrenar modelos ni integrar RVC todavia. No instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
+La Fase 2A agrega preparacion real de datasets para entrenamiento futuro de voces RVC/Applio. Convierte audios autorizados desde `datasets/<dataset>/raw/` hacia WAV limpios en `datasets/<dataset>/clean/`, genera metadata y reportes, y mantiene el flujo sin entrenar modelos ni integrar RVC todavia.
+
+La Fase 2B prepara el flujo reproducible CPU/GPU para un GPU Droplet temporal futuro: sync seguro por `rsync`, checklist GPU, placeholder de entrenamiento y placeholders de modelo. Todavia no instala dependencias, no clona repositorios externos, no entrena modelos, no ejecuta inferencia RVC real y no toca Docker Swarm, Portainer, Traefik ni ningun stack existente del servidor.
 
 ## Uso autorizado
 
@@ -70,6 +72,16 @@ Este proyecto esta pensado para uso personal o para voces con autorizacion expli
 - Saltar salidas existentes salvo que se use `--overwrite`.
 - Mantener audios raw intactos.
 - Todavia no entrena modelos ni integra RVC/Applio.
+
+### Fase 2B: flujo CPU/GPU reproducible
+
+- Documentar el flujo del GPU Droplet temporal en `docs/GPU_WORKFLOW.md`.
+- Enviar repo, datasets y placeholders de modelos al GPU con `scripts/sync_to_gpu.sh`.
+- Recibir solo `models/<model>/` desde el GPU con `scripts/sync_from_gpu.sh`.
+- Mantener `--dry-run` por defecto en sincronizaciones.
+- Preparar `scripts/setup_gpu.sh` como checklist sin `apt`, `pip` ni descargas.
+- Preparar `scripts/train_gpu.sh` como placeholder: valida WAV limpios y escribe notas/config ejemplo, pero no entrena.
+- Mantener claro que no existen `.pth` ni `.index` reales todavia.
 
 ### MVP 1: inferencia individual
 
@@ -306,6 +318,50 @@ Recomendaciones para datasets RVC/Applio futuros:
 - Sin voces cruzadas.
 
 Esta fase solo prepara el dataset. No entrena modelos, no descarga RVC/Applio y no hace conversion de voz.
+
+## Fase 2B: flujo CPU/GPU temporal
+
+La guia completa esta en `docs/GPU_WORKFLOW.md`.
+
+Preparar `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Editar `GPU_HOST` y `GPU_SSH_KEY` cuando exista el GPU Droplet temporal.
+
+Revisar sync hacia GPU sin modificar nada:
+
+```bash
+./scripts/sync_to_gpu.sh --dry-run
+```
+
+Enviar al GPU solo con confirmacion explicita:
+
+```bash
+./scripts/sync_to_gpu.sh --yes
+```
+
+En el GPU Droplet futuro, revisar checklist seguro:
+
+```bash
+./scripts/setup_gpu.sh
+```
+
+Ejecutar placeholder de entrenamiento:
+
+```bash
+./scripts/train_gpu.sh --dataset mi_voz --model mi_voz
+```
+
+Recibir modelo desde GPU en dry-run:
+
+```bash
+./scripts/sync_from_gpu.sh --model mi_voz --dry-run
+```
+
+Fase 2B todavia no entrena modelos, no instala paquetes, no descarga Applio/RVC y no crea `.pth` ni `.index` falsos.
 
 ## Flujo de inferencia individual
 

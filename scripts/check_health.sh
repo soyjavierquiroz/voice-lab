@@ -67,11 +67,18 @@ echo
 check_file "${ROOT}/app/cli.py"
 check_file "${ROOT}/app/dataset_cli.py"
 check_file "${ROOT}/app/queue_cli.py"
+check_file "${ROOT}/docs/GPU_WORKFLOW.md"
+check_file "${ROOT}/models/mi_voz/train_notes.md"
+check_file "${ROOT}/models/mi_voz/config.example.json"
 check_executable "${ROOT}/scripts/prepare_dataset.sh"
 check_executable "${ROOT}/scripts/run_batch_lowprio.sh"
 check_executable "${ROOT}/scripts/run_batch_limited.sh"
 check_executable "${ROOT}/scripts/install_cron.sh"
 check_executable "${ROOT}/scripts/remove_cron.sh"
+check_executable "${ROOT}/scripts/sync_to_gpu.sh"
+check_executable "${ROOT}/scripts/sync_from_gpu.sh"
+check_executable "${ROOT}/scripts/setup_gpu.sh"
+check_executable "${ROOT}/scripts/train_gpu.sh"
 
 echo
 check_dir "${ROOT}/app"
